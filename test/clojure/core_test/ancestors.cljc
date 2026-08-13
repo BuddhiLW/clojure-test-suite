@@ -77,6 +77,7 @@
            :clj  (is (contains? (ancestors ChildT) AncestorT))))
 
       #?(:bb      "bb doesn't report ancestors by type inheritance for custom types"
+         :cljw    "cljw has no host classes, so a protocol has no generated interface to be an ancestor of; its `ancestors` answers from the derive hierarchy only"
          :cljs    "cljs doesn't report ancestors by type inheritance yet (CLJS-3464)"
          :default (testing "returns ancestors by type inheritance when tag is a custom type"
                     (is (contains? (ancestors TestAncestorsType) #?(:lpy (:interface TestAncestorsProtocol) :phel TestAncestorsProtocol :default clojure.core_test.ancestors.TestAncestorsProtocol)))
@@ -140,6 +141,7 @@
                              datatypes)))
 
       #?(:bb      "bb doesn't report ancestors by type inheritance for custom types"
+         :cljw    "cljw has no host classes, so a protocol has no generated interface to be an ancestor of; its `ancestors` answers from the derive hierarchy only"
          :cljs    "cljs doesn't report ancestors by type inheritance yet (CLJS-3464)"
          :default (testing "returns ancestors by type inheritance when tag is a custom type, whether the tag is in h or not"
                     (are [h tag] (let [actual-ancestors (ancestors h tag)]
