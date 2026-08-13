@@ -8,6 +8,11 @@
 #?(:bb
    nil
 
+   ;; cljw has no host classes and no primitive/Object method overloads, so
+   ;; there is no boxing distinction for `num` to make and nothing to check.
+   :cljw
+   nil
+
    :clj
    (do
     (definterface IChecker
@@ -66,6 +71,9 @@
                   ##Inf)]
          
          :cljs
+         []
+
+         :cljw
          []
 
          :clj
