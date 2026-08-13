@@ -9,7 +9,8 @@
       (let [nil-atm  (atom nil)
             nil-atm2 (atom nil nil nil)
             nil-atm3 (apply atom (take 11 (repeat nil)))]
-        #?(:cljs (is (every? #(satisfies? cljs.core/IAtom %) [nil-atm nil-atm2 nil-atm3]))
+        #?(:cljw (is (every? #(= "Atom" (str (type %))) [nil-atm nil-atm2 nil-atm3]))
+           :cljs (is (every? #(satisfies? cljs.core/IAtom %) [nil-atm nil-atm2 nil-atm3]))
            :clj (is (every? (partial instance? clojure.lang.Atom) [nil-atm nil-atm2 nil-atm3])))
         (is (every? nil? (map deref [nil-atm nil-atm2 nil-atm3])))))
 
@@ -122,7 +123,8 @@
     (testing "atom accepts all values"
       (are [v] (let [the-atom (atom v)]
                  (and (= v (deref the-atom))
-                      #?(:cljs (is (satisfies? cljs.core/IAtom the-atom))
+                      #?(:cljw (is (= "Atom" (str (type the-atom))))
+                         :cljs (is (satisfies? cljs.core/IAtom the-atom))
                          :clj (is (instance? clojure.lang.Atom the-atom)))))
         'sym
         `sym

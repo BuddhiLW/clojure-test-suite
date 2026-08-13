@@ -40,6 +40,16 @@
              :task (do
                     (banner "Running Phel Tests")
                     (shell "composer test"))}
+  test-cljw {:doc "Runs tests in ClojureWasm (binary: $CLJW_BIN, else `cljw`)"
+             :requires ([native-test])
+             :task (do
+                    (banner "Running ClojureWasm Tests")
+                    (native-test/cljw))}
+  test-rust {:doc "Runs tests in clojurust (binary: $CLJRS_BIN, else `cljrs`)"
+             :requires ([native-test])
+             :task (do
+                    (banner "Running clojurust Tests")
+                    (native-test/cljrs))}
   test-all {:doc "Run tests under all dialects"
             :task (do
                    (run 'test-jvm)
@@ -47,7 +57,9 @@
                    (run 'test-cljr)
                    (run 'test-bb)
                    (run 'test-lpy)
-                   (run 'test-phel))}
+                   (run 'test-phel)
+                   (run 'test-cljw)
+                   (run 'test-rust))}
   test {:doc "Runs tests in multiple named dialects: jvm, bb, cljs, lpy, or phel"
         :task (letfn [(help []
                        (println "Usage: bb test <dialect1> [<dialect2>]...")
@@ -58,9 +70,11 @@
                        (println "  bb      Runs tests in Babashka")
                        (println "  lpy     Runs tests in Basilisp")
                        (println "  phel    Runs tests in Phel")
+                       (println "  cljw    Runs tests in ClojureWasm")
+                       (println "  rust    Runs tests in clojurust")
                        (println "  all     Runs tests in all supported dialects")
                        (println "Tests are run in the order given."))]
-               (let [valid #{"jvm" "cljs" "cljr" "bb" "lpy" "phel" "all"}
+               (let [valid #{"jvm" "cljs" "cljr" "bb" "lpy" "phel" "cljw" "rust" "all"}
                      unknown (remove valid *command-line-args*)]
                 (cond
                  (not (some? (seq *command-line-args*)))
@@ -83,7 +97,9 @@
                    "cljr" (run 'test-cljr)
                    "bb" (run 'test-bb)
                    "lpy" (run 'test-lpy)
-                   "phel" (run 'test-phel))))))}
+                   "phel" (run 'test-phel)
+                   "cljw" (run 'test-cljw)
+                   "rust" (run 'test-rust))))))}
   new-test {:doc "Creates new test for the Clojure symbols named by <args>. Unqualified symbols assume clojure.core"
             :requires ([new-test])
             :task (new-test/new-test *command-line-args*)}}}

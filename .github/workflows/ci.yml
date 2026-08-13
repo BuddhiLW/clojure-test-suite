@@ -207,3 +207,36 @@ jobs:
 
   #    - name: Run tests
   #      run: composer test
+
+  #test-cljw:
+  #  runs-on: ubuntu-latest
+  #  steps:
+  #    - uses: actions/checkout@v6
+
+  #    - name: Install babashka
+  #      uses: DeLaGuardo/setup-clojure@13.6.0
+  #      with:
+  #        bb: latest
+
+  #    - name: Install ClojureWasm
+  #      run: |
+  #        brew install buddhilw/tap/cljw
+
+  #    - name: Run ClojureWasm tests
+  #      run: bb test-cljw
+
+  #test-rust:
+  #  runs-on: ubuntu-latest
+  #  steps:
+  #    - uses: actions/checkout@v6
+
+  #    - name: Install babashka
+  #      uses: DeLaGuardo/setup-clojure@13.6.0
+  #      with:
+  #        bb: latest
+
+  #    - name: Install clojurust
+  #      run: cargo install cljrs
+
+  #    - name: Run clojurust tests
+  #      run: bb test-rust

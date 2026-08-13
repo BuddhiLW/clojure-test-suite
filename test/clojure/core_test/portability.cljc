@@ -21,6 +21,9 @@
      :lpy (integer? n)
      :phel (integer? n)
      :jank (cpp/jank.runtime.is_big_integer n)
+     ;; cljw's `int?` is true for its BigInt (it answers "integral", not
+     ;; "fixed-precision"), so the `:default` test can never see a big int.
+     :cljw (= "BigInt" (str (type n)))
      :default
      (and (integer? n)
           (not (int? n)))))
@@ -31,6 +34,8 @@
      :clj (Thread/sleep ms)
      :lpy (time/sleep ms)
      :phel (phel.async/delay (/ ms 1000))
+     ;; fully qualified: this fn is itself named `sleep`
+     :rust (clojure.core/sleep ms)
      :jank (cpp/std.this_thread.sleep_for
             (cpp/std.chrono.milliseconds
              (cpp/jank.runtime.to_int ms)))))
@@ -43,6 +48,15 @@
      :lpy (instance? basilisp.lang.seq/LazySeq x)
      :phel (phel.core/lazy-seq? x)
      :jank (cpp/== (.get_type x) cpp/jank.runtime.object_type.lazy_sequence)
+     ;; cljw has no host-class syntax; `type` answers with the simple type
+     ;; name, and a lazy seq is the only thing that names itself LazySeq.
+     :cljw (= "LazySeq" (str (type x)))
+     ;; clojurust reports every seq as `List`, so the type is no help. Its
+     ;; `realized?` accepts an IPending and throws otherwise, which makes
+     ;; "does realized? apply" the available lazy-seq test.
+     :rust (and (seq? x)
+                (try (do (realized? x) true)
+                     (catch Throwable _ false)))
      :default (instance? clojure.lang.LazySeq x)))
 
 ;; --- Portable exception multimethod. ---
@@ -56,6 +70,12 @@
 ;; risk accidentally using dialect-specific symbols as `:default` cases.".
 
 #?(:cljs nil   ; CLJS is special. See below.
+
+   ;; clojurust has no `assert-expr` multimethod: its `clojure.test/is`
+   ;; recognises a `thrown?` head itself (by the symbol's name, so the
+   ;; aliased `p/thrown?` is recognised too) and reports the pass/fail
+   ;; directly. Nothing to register.
+   :rust nil
 
    :lpy
    (defmethod t/assert-expr 'p/thrown?

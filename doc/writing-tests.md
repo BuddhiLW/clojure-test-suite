@@ -133,6 +133,8 @@ $ bb test-cljr       # run tests under ClojureCLR
 $ bb test-bb         # run tests under Babashka
 $ bb test-lpy        # run tests under Basilisp
 $ bb test-phel       # run tests under Phel
+$ bb test-cljw       # run tests under ClojureWasm
+$ bb test-rust       # run tests under clojurust
 $ bb test-all        # run tests for all dialects (sequentially)
 ```
 
@@ -236,12 +238,16 @@ When using reader conditionals (i.e. `#?(...)`) to write dialect-specific code, 
    :lpy     ...
    :phel    ...
    :jank    ...
+   :rust    ...
+   :cljw    ...
    :cljs    ...
    :clj     ...
    :default ...)
 ```
  
 This is important not only for consistency but also for ensuring your tests runs as expected since certain dialects, like Babashka, will use the Clojure branch of a reader conditional if it's listed higher than the Babashka branch of the reader conditional. 
+ClojureWasm is in the same position — its feature set is `{:cljw, :clj, :default}`, so a `:cljw` branch placed after `:clj` never fires.
+clojurust reads `:rust` and `:default` only, so its branch is never shadowed; it is listed with the others for consistency.
  
 ## Things to Avoid
 
