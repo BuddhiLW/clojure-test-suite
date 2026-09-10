@@ -1,0 +1,11 @@
+{:infinity "##Inf",
+ :long-max "9223372036854775807",
+ :long-min "-9223372036854775808",
+ :nan "##NaN",
+ :negative-double "1.5",
+ :negative-inf "##Inf",
+ :negative-long "7",
+ :negative-zero "0.0",
+ :positive-double "1.5",
+ :positive-long "7",
+ :zero "0"}
