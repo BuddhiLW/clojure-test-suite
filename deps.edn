@@ -1,1 +1,12 @@
-{:paths ["test"]}
+{:paths ["test"]
+
+ :aliases
+ ;; Off the default :paths: bb/native_test.clj globs "test", so model/ stays
+ ;; invisible to the dialect runners unless opted in.
+ {:model
+  {:extra-paths ["model"]
+   :extra-deps  {io.github.hive-agi/hive-test       {:mvn/version "0.4.2"}
+                 io.github.hive-agi/hive-schemas    {:mvn/version "0.1.31"}
+                 metosin/malli                      {:mvn/version "0.20.1"}
+                 org.clojure/test.check             {:mvn/version "1.1.3"}
+                 org.typedclojure/typed.clj.checker {:mvn/version "1.4.0"}}}}}
