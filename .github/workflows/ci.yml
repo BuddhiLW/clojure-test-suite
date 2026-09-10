@@ -10,6 +10,16 @@ env:
   # increment to "clear" the cache
   CACHE_VERSION: "v1"
 
+  # Pinned native-dialect builds. Bump by hand.
+  CLJRS_VERSION: "0.2.12"
+  CLJW_VERSION: "v1.14.4"
+
+  # Most namespaces each native dialect may report failures for. Bump only
+  # together with the test that caused it.
+  CLJRS_MAX_RED: "47"
+  CLJW_MAX_RED: "43"
+  NATIVE_TEST_TIMEOUT: "60"
+
 jobs:
   test-jvm:
     runs-on: ubuntu-latest
@@ -140,12 +150,8 @@ jobs:
       - name: Run ClojureCLR Tests
         run: cljr -X:test
 
-  # These are disabled for now until we add some parity reporting mechanism. Our priority
-  # right now is filling out the test suite and newer dialects have far more failures which
-  # get in the way of us writing the tests. Dialect devs are still encouraged to run this
-  # test suite in their forks. Meanwhile, we're working on implementing a parity reporting
-  # mechanism so that we can enable all of these again, and more, and get nice reports
-  # about their compatibility.
+  # Still disabled on this fork.
+  # test-cljw and test-rust below are live; `bb conformance` is the parity report.
   #
   #test-basilisp:
   #  runs-on: ubuntu-latest
@@ -208,35 +214,203 @@ jobs:
   #    - name: Run tests
   #      run: composer test
 
-  #test-cljw:
-  #  runs-on: ubuntu-latest
-  #  steps:
-  #    - uses: actions/checkout@v6
 
-  #    - name: Install babashka
-  #      uses: DeLaGuardo/setup-clojure@13.6.0
-  #      with:
-  #        bb: latest
+  test-cljw:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
 
-  #    - name: Install ClojureWasm
-  #      run: |
-  #        brew install buddhilw/tap/cljw
+      - name: Install babashka
+        uses: DeLaGuardo/setup-clojure@13.6.0
+        with:
+          bb: latest
 
-  #    - name: Run ClojureWasm tests
-  #      run: bb test-cljw
+      - name: Install ClojureWasm
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/cljw"
+          base="https://github.com/BuddhiLW/ClojureWasm/releases/download/$CLJW_VERSION"
+          curl -fsSL -o "$RUNNER_TEMP/cljw/cljw.tar.gz" "$base/cljw-linux-x86_64.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/cljw/cljw.tar.gz.sha256" "$base/cljw-linux-x86_64.tar.gz.sha256"
+          (cd "$RUNNER_TEMP/cljw" && sed 's,cljw-linux-x86_64.tar.gz,cljw.tar.gz,' cljw.tar.gz.sha256 | sha256sum -c -)
+          tar xzf "$RUNNER_TEMP/cljw/cljw.tar.gz" -C "$RUNNER_TEMP/cljw"
+          chmod +x "$RUNNER_TEMP/cljw/cljw"
+          "$RUNNER_TEMP/cljw/cljw" --version
 
-  #test-rust:
-  #  runs-on: ubuntu-latest
-  #  steps:
-  #    - uses: actions/checkout@v6
+      - name: Run ClojureWasm tests
+        env:
+          CLJW_BIN: ${{ runner.temp }}/cljw/cljw
+        run: bb test-cljw || true
 
-  #    - name: Install babashka
-  #      uses: DeLaGuardo/setup-clojure@13.6.0
-  #      with:
-  #        bb: latest
+      - name: Check the ClojureWasm ratchet
+        run: |
+          set -euo pipefail
+          bb -e '
+            (let [f "target/conformance/cljw.edn"]
+              (when-not (.exists (java.io.File. f))
+                (println "::error::ClojureWasm wrote no run file; the sweep never finished")
+                (System/exit 1))
+              (let [r (clojure.edn/read-string (slurp f))
+                    {:keys [green red abort timeout]} (:tally r)
+                    pin (System/getenv "CLJW_VERSION")
+                    floor (parse-long (System/getenv "CLJW_MAX_RED"))]
+                (when-not (clojure.string/includes? (str (:version r)) (subs pin 1))
+                  (println (format "::error::run recorded %s but CLJW_VERSION pins %s"
+                                   (pr-str (:version r)) pin))
+                  (System/exit 1))
+                (spit (System/getenv "GITHUB_STEP_SUMMARY")
+                      (format "## ClojureWasm %s\n\n%d of %d namespaces green, %d with failures, %d aborted, %d timed out.\nRatchet: %d failing, floor %d.\n\n"
+                              (:version r) green (:total r) red abort timeout red floor)
+                      :append true)
+                (println (format "green %d red %d abort %d timeout %d (red floor %d)"
+                                 green red abort timeout floor))
+                (when (> red floor)
+                  (println (format "::error::ClojureWasm reports failures in %d namespaces, above the ratchet floor of %d"
+                                   red floor))
+                  (System/exit 1))))'
 
-  #    - name: Install clojurust
-  #      run: cargo install cljrs
+      - name: Upload the ClojureWasm run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-edn-cljw
+          path: target/conformance/cljw.edn
+          if-no-files-found: warn
 
-  #    - name: Run clojurust tests
-  #      run: bb test-rust
+  test-rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install babashka
+        uses: DeLaGuardo/setup-clojure@13.6.0
+        with:
+          bb: latest
+
+      - name: Cache clojurust binary
+        id: cljrs-cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/bin/cljrs
+          key: cljrs-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ env.CLJRS_VERSION }}
+
+      - name: Prepare Rust toolchain
+        if: steps.cljrs-cache.outputs.cache-hit != 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install clojurust
+        if: steps.cljrs-cache.outputs.cache-hit != 'true'
+        run: cargo install cljrs --version "$CLJRS_VERSION" --locked
+
+      - name: Run clojurust tests
+        run: |
+          cljrs --version
+          bb test-rust || true
+
+      - name: Check the clojurust ratchet
+        run: |
+          set -euo pipefail
+          bb -e '
+            (let [f "target/conformance/cljrs.edn"]
+              (when-not (.exists (java.io.File. f))
+                (println "::error::clojurust wrote no run file; the sweep never finished")
+                (System/exit 1))
+              (let [r (clojure.edn/read-string (slurp f))
+                    {:keys [green red abort timeout]} (:tally r)
+                    pin (System/getenv "CLJRS_VERSION")
+                    floor (parse-long (System/getenv "CLJRS_MAX_RED"))]
+                (when-not (clojure.string/includes? (str (:version r)) pin)
+                  (println (format "::error::run recorded %s but CLJRS_VERSION pins %s"
+                                   (pr-str (:version r)) pin))
+                  (System/exit 1))
+                (spit (System/getenv "GITHUB_STEP_SUMMARY")
+                      (format "## clojurust %s\n\n%d of %d namespaces green, %d with failures, %d aborted, %d timed out.\nRatchet: %d failing, floor %d.\n\n"
+                              (:version r) green (:total r) red abort timeout red floor)
+                      :append true)
+                (println (format "green %d red %d abort %d timeout %d (red floor %d)"
+                                 green red abort timeout floor))
+                (when (> red floor)
+                  (println (format "::error::clojurust reports failures in %d namespaces, above the ratchet floor of %d"
+                                   red floor))
+                  (System/exit 1))))'
+
+      - name: Upload the clojurust run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-edn-cljrs
+          path: target/conformance/cljrs.edn
+          if-no-files-found: warn
+
+  conformance-babashka:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Prepare java
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Install babashka
+        uses: DeLaGuardo/setup-clojure@13.6.0
+        with:
+          bb: latest
+
+      - name: Run the babashka sweep
+        run: bb test-babashka || true
+
+      - name: Upload the babashka run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-edn-babashka
+          path: target/conformance/babashka.edn
+          if-no-files-found: warn
+
+  conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [test-cljw, test-rust, conformance-babashka]
+    if: always()
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install babashka
+        uses: DeLaGuardo/setup-clojure@13.6.0
+        with:
+          bb: latest
+
+      - name: Collect the per-dialect runs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: conformance-edn-*
+          merge-multiple: true
+          path: target/conformance
+
+      - name: Build the parity report
+        run: |
+          set -euo pipefail
+          ls -l target/conformance
+          bb conformance
+
+      - name: Publish the parity report
+        run: |
+          set -euo pipefail
+          if [ ! -f doc/conformance.md ]; then
+            echo "::error::bb conformance did not write doc/conformance.md"
+            exit 1
+          fi
+          cat doc/conformance.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the parity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-report
+          path: doc/conformance.md
+          if-no-files-found: error
