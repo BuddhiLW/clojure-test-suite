@@ -50,6 +50,22 @@
              :task (do
                     (banner "Running clojurust Tests")
                     (native-test/cljrs))}
+  test-babashka {:doc "Runs the per-namespace conformance sweep in Babashka (binary: $BB_BIN, else `bb`)"
+                 :requires ([native-test])
+                 :task (do
+                        (banner "Running Babashka Conformance Sweep")
+                        (native-test/babashka))}
+  conformance {:doc "Joins target/conformance/*.edn into doc/conformance.md"
+               :requires ([conformance])
+               :task (do
+                      (banner "Building Conformance Matrix")
+                      (conformance/generate!))}
+  conformance-sweep {:doc "Measures every dialect whose binary resolves, then rebuilds doc/conformance.md. Reports; does not gate - use test-rust/test-cljw/test-babashka for a non-zero exit"
+                     :requires ([native-test] [conformance])
+                     :task (do
+                            (banner "Conformance Sweep")
+                            (native-test/sweep)
+                            (conformance/generate!))}
   test-all {:doc "Run tests under all dialects"
             :task (do
                    (run 'test-jvm)
