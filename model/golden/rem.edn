@@ -1,0 +1,31 @@
+{:bigdec "1.0M",
+ :bigdec-downcasts "1.0",
+ :bigint "1N",
+ :by-infinity "##NaN",
+ :double-denominator "1.0",
+ :double-double "1.0",
+ :double-fraction "1.5",
+ :double-negative "-1.5",
+ :double-numerator "1.0",
+ :exact "0",
+ :infinite-numerator
+ "[:throws \"NumberFormatException\" \"Infinite or NaN\"]",
+ :long-min-by-neg-one "0",
+ :magnitude-below-divisor "5",
+ :nan-denominator
+ "[:throws \"NumberFormatException\" \"Infinite or NaN\"]",
+ :nan-numerator
+ "[:throws \"NumberFormatException\" \"Infinite or NaN\"]",
+ :neg-neg "-1",
+ :neg-pos "-1",
+ :negative-zero-numerator "-0.0",
+ :pos-neg "1",
+ :pos-pos "1",
+ :ratio-below-one "1/2",
+ :ratio-mixed "7/2",
+ :ratio-promotes "0N",
+ :zero-denominator
+ "[:throws \"ArithmeticException\" \"Divide by zero\"]",
+ :zero-denominator-double
+ "[:throws \"ArithmeticException\" \"Divide by zero\"]",
+ :zero-numerator "0"}

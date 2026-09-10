@@ -1,0 +1,32 @@
+{:bigdec "0.5M",
+ :bigdec-by-ratio "4M",
+ :bigint "3N",
+ :divide-by-zero-long
+ "[:throws \"ArithmeticException\" \"Divide by zero\"]",
+ :double-by-zero-double
+ "[:throws \"ArithmeticException\" \"Divide by zero\"]",
+ :double-by-zero-long
+ "[:throws \"ArithmeticException\" \"Divide by zero\"]",
+ :double-double "7.5",
+ :exact-long "3",
+ :inf-over-zero "[:throws \"ArithmeticException\" \"Divide by zero\"]",
+ :long-double "7.5",
+ :long-min-by-neg-one "9223372036854775808N",
+ :nan-denominator "##NaN",
+ :nan-over-zero "##NaN",
+ :neg-one-over-inf "-0.0",
+ :negative-ratio "-7/2",
+ :no-args
+ "[:throws \"ArityException\" \"Wrong number of args (0) passed to: clojure.core//\"]",
+ :one-over-inf "0.0",
+ :ratio-by-ratio "3/2",
+ :ratio-result "1/2",
+ :sign-both-negative "1/3",
+ :sign-normalized "-1/3",
+ :unary-double "0.5",
+ :unary-long "1/2",
+ :unary-ratio "2N",
+ :unary-zero "[:throws \"ArithmeticException\" \"Divide by zero\"]",
+ :variadic "1/362880",
+ :zero-by-zero-double
+ "[:throws \"ArithmeticException\" \"Divide by zero\"]"}
