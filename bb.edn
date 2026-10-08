@@ -80,7 +80,8 @@
                    (run 'test-lpy)
                    (run 'test-phel)
                    (run 'test-cljw)
-                   (run 'test-rust))}
+                   (run 'test-rust)
+                   (run 'test-jank))}
   test {:doc "Runs tests in multiple named dialects: jvm, bb, cljs, lpy, or phel"
         :task (letfn [(help []
                        (println "Usage: bb test <dialect1> [<dialect2>]...")
@@ -93,9 +94,10 @@
                        (println "  phel    Runs tests in Phel")
                        (println "  cljw    Runs tests in ClojureWasm")
                        (println "  rust    Runs tests in clojurust")
+                       (println "  jank    Runs tests in jank")
                        (println "  all     Runs tests in all supported dialects")
                        (println "Tests are run in the order given."))]
-               (let [valid #{"jvm" "cljs" "cljr" "bb" "lpy" "phel" "cljw" "rust" "all"}
+               (let [valid #{"jvm" "cljs" "cljr" "bb" "lpy" "phel" "cljw" "rust" "jank" "all"}
                      unknown (remove valid *command-line-args*)]
                 (cond
                  (not (some? (seq *command-line-args*)))
@@ -120,7 +122,8 @@
                    "lpy" (run 'test-lpy)
                    "phel" (run 'test-phel)
                    "cljw" (run 'test-cljw)
-                   "rust" (run 'test-rust))))))}
+                   "rust" (run 'test-rust)
+                   "jank" (run 'test-jank))))))}
   new-test {:doc "Creates new test for the Clojure symbols named by <args>. Unqualified symbols assume clojure.core"
             :requires ([new-test])
             :task (new-test/new-test *command-line-args*)}}}

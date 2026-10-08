@@ -25,3 +25,4 @@ See these documents for how to set up individual dialect-specific environments a
 6. [Phel](doc/phel.md)
 7. [ClojureWasm](doc/clojurewasm.md)
 8. [clojurust](doc/clojurust.md)
+9. [jank](doc/jank.md)
