@@ -77,6 +77,9 @@
      :rust (and (seq? x)
                 (try (do (realized? x) true)
                      (catch Throwable _ false)))
+     ;; cljd.core's LazySeq is a Dart class; `instance?` takes no
+     ;; class there, the Dart `is?` does.
+     :cljd (dart/is? x LazySeq)
      :default (instance? clojure.lang.LazySeq x)))
 
 ;; --- Portable exception multimethod. ---
@@ -90,6 +93,16 @@
 ;; risk accidentally using dialect-specific symbols as `:default` cases.".
 
 #?(:cljs nil   ; CLJS is special. See below.
+   ;; cljd.test has no `assert-expr` multimethod: its `is` only knows a bare
+   ;; `thrown?` head. Any other head that resolves to a MACRO falls to the
+   ;; generic branch, which asserts the macro's value is truthy, so `p/thrown?`
+   ;; is a macro answering "did the body throw".
+   :cljd
+   (defmacro thrown? [& body]
+     `(try
+        (do ~@body)
+        false
+        (catch ~'Object _# true)))
 
    ;; clojurust has no `assert-expr` multimethod: its `clojure.test/is`
    ;; recognises a `thrown?` head itself (by the symbol's name, so the
