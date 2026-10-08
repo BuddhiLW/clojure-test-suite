@@ -81,9 +81,12 @@
 
 (defn- sdeps-e-command
   "The argv for a dialect whose CLI takes `-Sdeps <edn> -e <expr>` (Jolt, with
-  a clj-style option surface): the test root goes in as a source path."
+  a clj-style option surface): the test root goes in as a source path. Jolt
+  keeps the process alive after `-e` returns when a namespace has started a
+  future, agent or watch thread, so the expression ends in an explicit exit."
   [bin ns-name]
-  [bin "-Sdeps" (str "{:paths [\"" test-root "\"]}") "-e" (run-tests-expr ns-name)])
+  [bin "-Sdeps" (str "{:paths [\"" test-root "\"]}") "-e"
+   (str (run-tests-expr ns-name) " (System/exit 0)")])
 
 (defn- marker-counts
   [out]
