@@ -50,6 +50,11 @@
              :task (do
                     (banner "Running clojurust Tests")
                     (native-test/cljrs))}
+  test-jank {:doc "Runs tests in jank (binary: $JANK_BIN, else `jank`)"
+             :requires ([native-test])
+             :task (do
+                    (banner "Running jank Tests")
+                    (native-test/jank))}
   test-babashka {:doc "Runs the per-namespace conformance sweep in Babashka (binary: $BB_BIN, else `bb`)"
                  :requires ([native-test])
                  :task (do

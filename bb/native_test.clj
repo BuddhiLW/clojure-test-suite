@@ -79,6 +79,12 @@
   [bin ns-name]
   [bin "-cp" test-root "-e" (run-tests-expr ns-name)])
 
+(defn- jank-command
+  "The argv for jank, which has no `-e`: `run` a driver file with the suite
+  on the module path, the namespace after `--`."
+  [bin ns-name]
+  [bin "--module-path" test-root "run" "bb/jank_driver.jank" "--" ns-name])
+
 (defn- marker-counts
   [out]
   (when-let [[_ t p f e] (re-find #"#counts (\d+) (\d+) (\d+) (\d+)" out)]
@@ -122,7 +128,14 @@
               :version-args ["--version"]
               :reports #{:test-vars :assertions}
               :command cp-e-command
-              :counts marker-counts}))
+              :counts marker-counts}
+   :jank {:label "jank"
+          :binary-env "JANK_BIN"
+          :binary-default "jank"
+          :version-args ["print-binary-version"]
+          :reports #{:test-vars :assertions}
+          :command jank-command
+          :counts marker-counts}))
 
 (defn dialect
   "The registry row for `dialect-key`, or nil."
@@ -305,3 +318,9 @@
   suite's code."
   [& _]
   (run-and-exit :babashka))
+
+(defn jank
+  "Run the suite under jank, one namespace per subprocess. Exits with the
+  suite's code."
+  [& _]
+  (run-and-exit :jank))
