@@ -6,9 +6,29 @@
 
 (defmacro when-var-exists [var-sym & body]
   (let [cljs? (some? (:ns &env))
-        exists? (boolean (if cljs?
-                           ((resolve 'cljs.analyzer.api/resolve) &env var-sym)
-                           (resolve var-sym)))]
+        exists? (boolean #?(:cljd
+                            ;; cljd macros resolve against the compiler's own
+                            ;; table, `(:nses &env)`: the same walk
+                            ;; cljd.test/resolve-symbol makes (it is private).
+                            (letfn [(res [sym]
+                                      (let [{:keys [libs] :as nses} (:nses &env)
+                                            {:keys [mappings aliases] :as cur} (nses (:current-ns nses))]
+                                        (when-not (&env sym)
+                                          (or (cur sym)
+                                              (if-some [v (mappings sym)]
+                                                (res v)
+                                                (let [sym-ns (namespace sym)
+                                                      lib-ns (if (= "clojure.core" sym-ns)
+                                                               "cljd.core"
+                                                               (some-> (get aliases sym-ns) libs :ns name))]
+                                                  (if (some-> lib-ns (not= sym-ns))
+                                                    (res (symbol lib-ns (name sym)))
+                                                    (some-> sym-ns symbol nses (get (symbol (name sym)))))))))))]
+                              (res var-sym))
+                            :default
+                            (if cljs?
+                              ((resolve 'cljs.analyzer.api/resolve) &env var-sym)
+                              (resolve var-sym))))]
     (if exists?
       `(do
          ~@body)
