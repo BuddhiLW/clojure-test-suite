@@ -24,7 +24,10 @@
       ;; float doesn't do anything, whereas in Clojure JVM it rounds
       ;; down to zero. All floating point numbers in Basilisp are doubles,
       ;; so float returns the same value here.
-      #?@(:lpy [r/min-double r/min-double]
+      ;; ClojureWasm has no f32 either (AD-004): `float` yields the f64 it
+      ;; was given, so r/min-double does not underflow to zero.
+      #?@(:cljw [r/min-double r/min-double]
+          :lpy [r/min-double r/min-double]
           :phel [r/min-double r/min-double]
           :jank [r/min-double r/min-double]
           :cljs [r/min-double r/min-double]
@@ -38,6 +41,15 @@
          (is (= (float 0.0) (float "0")))
          (is (p/thrown? (float :0)))]
         
+        ;; ClojureWasm (AD-004): no f32, so nothing overflows; non-numbers
+        ;; still throw.
+        :cljw
+        [(is (= r/max-double (float r/max-double)))
+         (is (= ##Inf (float ##Inf)))
+         (is (= ##-Inf (float ##-Inf)))
+         (is (p/thrown? (float "0")))
+         (is (p/thrown? (float :0)))]
+
         :lpy
         [(is (= r/max-double (float r/max-double)))
          (is (= ##Inf (float ##Inf)))
@@ -66,7 +78,15 @@
          (is (p/thrown? (float "0")))
          (is (p/thrown? (float :0)))])
 
-    #?@(:cljr
+    #?@(;; ClojureWasm (AD-004): `float` yields an f64, so the result is a
+        ;; double, never a java.lang.Float.
+        :cljw
+        [(is (double? (float 0)))
+         (is (double? (float 0.0)))
+         (is (double? (float 0N)))
+         (is (double? (float 0.0M)))]
+
+        :cljr
         [(is (instance? System.Single (float 0)))
          (is (instance? System.Single (float 0.0)))
          (is (instance? System.Single (float 0N)))
