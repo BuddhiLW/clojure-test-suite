@@ -1,0 +1,9 @@
+;; Per-namespace driver for `bb test-jank`: loads one suite namespace, runs it
+;; and echoes the summary on the `#counts` marker line `native-test` reads.
+;; Invoked as: jank --module-path test run bb/jank_driver.jank -- <namespace>
+(require 'clojure.test)
+
+(let [ns-sym (symbol (first *command-line-args*))]
+  (require ns-sym)
+  (let [s (clojure.test/run-tests ns-sym)]
+    (println "#counts" (:test s) (:pass s) (:fail s) (:error s))))

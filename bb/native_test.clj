@@ -79,6 +79,12 @@
   [bin ns-name]
   [bin "-cp" test-root "-e" (run-tests-expr ns-name)])
 
+(defn- jank-command
+  "The argv for jank, which has no `-e`: `run` a driver file with the suite
+  on the module path, the namespace after `--`."
+  [bin ns-name]
+  [bin "--module-path" test-root "run" "bb/jank_driver.jank" "--" ns-name])
+
 (defn- sdeps-e-command
   "The argv for a dialect whose CLI takes `-Sdeps <edn> -e <expr>` (Jolt, with
   a clj-style option surface): the test root goes in as a source path. Jolt
@@ -132,6 +138,13 @@
               :reports #{:test-vars :assertions}
               :command cp-e-command
               :counts marker-counts}
+   :jank {:label "jank"
+          :binary-env "JANK_BIN"
+          :binary-default "jank"
+          :version-args ["print-binary-version"]
+          :reports #{:test-vars :assertions}
+          :command jank-command
+          :counts marker-counts}
    :jolt {:label "Jolt"
           :binary-env "JOLT_BIN"
           :binary-default "jolt"
@@ -256,6 +269,21 @@
     (spit file (with-out-str (pprint/pprint run)))
     file))
 
+(defn- run-all
+  "Run every namespace in `nses`, in order. `$NATIVE_TEST_JOBS` (default 1)
+  runs that many namespaces at once, each still in its own process; results
+  keep the order of `nses`."
+  [dialect-key bin nses]
+  (let [jobs (max 1 (parse-long (env "NATIVE_TEST_JOBS" "1")))]
+    (if (= 1 jobs)
+      (mapv #(run-one dialect-key bin %) nses)
+      (let [pool (java.util.concurrent.Executors/newFixedThreadPool (int jobs))
+            tasks (mapv (fn [n] (.submit pool ^Callable (fn [] (run-one dialect-key bin n))))
+                        nses)
+            results (mapv #(.get ^java.util.concurrent.Future %) tasks)]
+        (.shutdown pool)
+        results))))
+
 (defn run-suite
   "Run every test namespace under `dialect-key`, print a report, persist the
   run under `target/conformance`, and RETURN it:
@@ -273,7 +301,7 @@
         bin (binary dialect-key)
         nses (test-namespaces)]
     (println "Running" (count nses) "namespaces under" label (str "(" bin ")"))
-    (let [results (mapv #(run-one dialect-key bin %) nses)
+    (let [results (run-all dialect-key bin nses)
           run {:dialect dialect-key
                :label label
                :binary bin
@@ -321,6 +349,12 @@
   suite's code."
   [& _]
   (run-and-exit :babashka))
+
+(defn jank
+  "Run the suite under jank, one namespace per subprocess. Exits with the
+  suite's code."
+  [& _]
+  (run-and-exit :jank))
 
 (defn jolt
   "Run the suite under Jolt, one namespace per subprocess. Exits with the
