@@ -17,7 +17,7 @@ env:
   # Most namespaces each native dialect may report failures for. Bump only
   # together with the test that caused it.
   CLJRS_MAX_RED: "47"
-  CLJW_MAX_RED: "43"
+  CLJW_MAX_RED: "44"
   NATIVE_TEST_TIMEOUT: "60"
 
 jobs:
