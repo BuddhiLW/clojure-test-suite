@@ -79,7 +79,7 @@
                      (catch Throwable _ false)))
      ;; cljd.core's LazySeq is a Dart class; `instance?` takes no
      ;; class there, the Dart `is?` does.
-     :cljd (dart/is? x LazySeq)
+     :cljd (dart/is? x cljd.core/LazySeq)
      :default (instance? clojure.lang.LazySeq x)))
 
 ;; --- Portable exception multimethod. ---
