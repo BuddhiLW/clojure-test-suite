@@ -60,6 +60,11 @@
                  :task (do
                         (banner "Running Babashka Conformance Sweep")
                         (native-test/babashka))}
+  test-jolt {:doc "Runs the per-namespace conformance sweep in Jolt (binary: $JOLT_BIN, else `jolt`)"
+             :requires ([native-test])
+             :task (do
+                    (banner "Running Jolt Conformance Sweep")
+                    (native-test/jolt))}
   conformance {:doc "Joins target/conformance/*.edn into doc/conformance.md"
                :requires ([conformance])
                :task (do

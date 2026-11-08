@@ -6,9 +6,29 @@
 
 (defmacro when-var-exists [var-sym & body]
   (let [cljs? (some? (:ns &env))
-        exists? (boolean (if cljs?
-                           ((resolve 'cljs.analyzer.api/resolve) &env var-sym)
-                           (resolve var-sym)))]
+        exists? (boolean #?(:cljd
+                            ;; cljd macros resolve against the compiler's own
+                            ;; table, `(:nses &env)`: the same walk
+                            ;; cljd.test/resolve-symbol makes (it is private).
+                            (letfn [(res [sym]
+                                      (let [{:keys [libs] :as nses} (:nses &env)
+                                            {:keys [mappings aliases] :as cur} (nses (:current-ns nses))]
+                                        (when-not (&env sym)
+                                          (or (cur sym)
+                                              (if-some [v (mappings sym)]
+                                                (res v)
+                                                (let [sym-ns (namespace sym)
+                                                      lib-ns (if (= "clojure.core" sym-ns)
+                                                               "cljd.core"
+                                                               (some-> (get aliases sym-ns) libs :ns name))]
+                                                  (if (some-> lib-ns (not= sym-ns))
+                                                    (res (symbol lib-ns (name sym)))
+                                                    (some-> sym-ns symbol nses (get (symbol (name sym)))))))))))]
+                              (res var-sym))
+                            :default
+                            (if cljs?
+                              ((resolve 'cljs.analyzer.api/resolve) &env var-sym)
+                              (resolve var-sym))))]
     (if exists?
       `(do
          ~@body)
@@ -61,6 +81,9 @@
      :rust (and (seq? x)
                 (try (do (realized? x) true)
                      (catch Throwable _ false)))
+     ;; cljd.core's LazySeq is a Dart class; `instance?` takes no
+     ;; class there, the Dart `is?` does.
+     :cljd (dart/is? x cljd.core/LazySeq)
      :default (instance? clojure.lang.LazySeq x)))
 
 ;; --- Portable exception multimethod. ---
@@ -74,6 +97,16 @@
 ;; risk accidentally using dialect-specific symbols as `:default` cases.".
 
 #?(:cljs nil   ; CLJS is special. See below.
+   ;; cljd.test has no `assert-expr` multimethod: its `is` only knows a bare
+   ;; `thrown?` head. Any other head that resolves to a MACRO falls to the
+   ;; generic branch, which asserts the macro's value is truthy, so `p/thrown?`
+   ;; is a macro answering "did the body throw".
+   :cljd
+   (defmacro thrown? [& body]
+     `(try
+        (do ~@body)
+        false
+        (catch ~'Object _# true)))
 
    ;; clojurust has no `assert-expr` multimethod: its `clojure.test/is`
    ;; recognises a `thrown?` head itself (by the symbol's name, so the

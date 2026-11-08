@@ -85,6 +85,15 @@
   [bin ns-name]
   [bin "--module-path" test-root "run" "bb/jank_driver.jank" "--" ns-name])
 
+(defn- sdeps-e-command
+  "The argv for a dialect whose CLI takes `-Sdeps <edn> -e <expr>` (Jolt, with
+  a clj-style option surface): the test root goes in as a source path. Jolt
+  keeps the process alive after `-e` returns when a namespace has started a
+  future, agent or watch thread, so the expression ends in an explicit exit."
+  [bin ns-name]
+  [bin "-Sdeps" (str "{:paths [\"" test-root "\"]}") "-e"
+   (str (run-tests-expr ns-name) " (System/exit 0)")])
+
 (defn- marker-counts
   [out]
   (when-let [[_ t p f e] (re-find #"#counts (\d+) (\d+) (\d+) (\d+)" out)]
@@ -135,6 +144,13 @@
           :version-args ["print-binary-version"]
           :reports #{:test-vars :assertions}
           :command jank-command
+          :counts marker-counts}
+   :jolt {:label "Jolt"
+          :binary-env "JOLT_BIN"
+          :binary-default "jolt"
+          :version-args ["--version"]
+          :reports #{:test-vars :assertions}
+          :command sdeps-e-command
           :counts marker-counts}))
 
 (defn dialect
@@ -339,3 +355,9 @@
   suite's code."
   [& _]
   (run-and-exit :jank))
+
+(defn jolt
+  "Run the suite under Jolt, one namespace per subprocess. Exits with the
+  suite's code."
+  [& _]
+  (run-and-exit :jolt))
