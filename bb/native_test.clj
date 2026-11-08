@@ -253,6 +253,21 @@
     (spit file (with-out-str (pprint/pprint run)))
     file))
 
+(defn- run-all
+  "Run every namespace in `nses`, in order. `$NATIVE_TEST_JOBS` (default 1)
+  runs that many namespaces at once, each still in its own process; results
+  keep the order of `nses`."
+  [dialect-key bin nses]
+  (let [jobs (max 1 (parse-long (env "NATIVE_TEST_JOBS" "1")))]
+    (if (= 1 jobs)
+      (mapv #(run-one dialect-key bin %) nses)
+      (let [pool (java.util.concurrent.Executors/newFixedThreadPool (int jobs))
+            tasks (mapv (fn [n] (.submit pool ^Callable (fn [] (run-one dialect-key bin n))))
+                        nses)
+            results (mapv #(.get ^java.util.concurrent.Future %) tasks)]
+        (.shutdown pool)
+        results))))
+
 (defn run-suite
   "Run every test namespace under `dialect-key`, print a report, persist the
   run under `target/conformance`, and RETURN it:
@@ -270,7 +285,7 @@
         bin (binary dialect-key)
         nses (test-namespaces)]
     (println "Running" (count nses) "namespaces under" label (str "(" bin ")"))
-    (let [results (mapv #(run-one dialect-key bin %) nses)
+    (let [results (run-all dialect-key bin nses)
           run {:dialect dialect-key
                :label label
                :binary bin
